@@ -107,6 +107,12 @@ public:
      * @param[in,out] atomF LAMMPS force array for local and ghost atoms.
      */
     void   getForces(double* const* const& atomF) const;
+    /** Calculate dEi/drj.
+     *
+     * @param[in] i,j  Atom index i and j
+     * @param[out] dEidrj 3-vector dE(i)/dr(j)
+     */
+    void   get_dEidrj(int i, int j, double *dEidrj) const;
     /** Check if this interface is correctly initialized.
      *
      * @return `True` if initialized, `False` otherwise.

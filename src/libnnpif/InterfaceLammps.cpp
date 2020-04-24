@@ -291,6 +291,50 @@ double InterfaceLammps::getAtomicEnergy(int index) const
     else return a.energy / cfenergy;
 }
 
+void InterfaceLammps::get_dEidrj(int i, int j, double *dEidrj) const
+{
+    double const cfforce = cflength / cfenergy;
+    double convForce = 1.0;
+
+    dEidrj[0] = 0.0;
+    dEidrj[1] = 0.0;
+    dEidrj[2] = 0.0;
+
+    if (normalize)
+    {
+        convForce = convLength / convEnergy;
+    }
+
+    Atom const* a = &(structure.atoms.at(i));
+
+    vector<Atom::Neighbor>::const_iterator n; 
+    for (n = a->neighbors.begin(); n != a->neighbors.end(); ++n)
+    {
+        if (j == n->index) break;
+    }
+
+    if (n == a->neighbors.end()) return;
+
+#ifdef IMPROVED_SFD_MEMORY
+    vector<vector<size_t> > const& tableFull
+            = elements.at(a->element).getSymmetryFunctionTable();
+    vector<size_t> const& table = tableFull.at(n->element);
+    for (size_t s = 0; s < n->dGdr.size(); ++s)
+    {
+        double const dEdG = a->dEdG[table.at(s)] * cfforce * convForce;
+#else
+    for (size_t s = 0; s < a->numSymmetryFunctions; ++s)
+    {
+        double const dEdG = a->dEdG[s] * cfforce * convForce;
+#endif
+        double const* const dGdr = n->dGdr[s].r;
+        dEidrj[0] += dEdG * dGdr[0];
+        dEidrj[1] += dEdG * dGdr[1];
+        dEidrj[2] += dEdG * dGdr[2];
+    }
+    return;
+}
+
 void InterfaceLammps::getForces(double* const* const& atomF) const
 {
     double const cfforce = cflength / cfenergy;

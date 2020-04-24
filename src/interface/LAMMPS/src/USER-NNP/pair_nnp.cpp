@@ -54,8 +54,38 @@ void PairNNP::compute(int eflag, int vflag)
     handleExtrapolationWarnings();
   }
 
-  // Calculate forces of local and ghost atoms.
-  interface.getForces(atom->f);
+  if (vflag_atom){
+    double ** f = atom->f;
+    double dEidrj[3];
+    double rc2 = maxCutoffRadius * maxCutoffRadius;
+    for (int ii = 0; ii < list->inum; ++ii) {
+      int i = list->ilist[ii];
+      for (int jj = 0; jj < list->numneigh[i]; ++jj) {
+	int j = list->firstneigh[i][jj];
+	j &= NEIGHMASK;
+	double dx = atom->x[i][0] - atom->x[j][0];
+	double dy = atom->x[i][1] - atom->x[j][1];
+	double dz = atom->x[i][2] - atom->x[j][2];
+	double d2 = dx * dx + dy * dy + dz * dz;
+	if (d2 > rc2) continue;
+	interface.get_dEidrj(i, j, dEidrj);
+	  
+	f[i][0] += dEidrj[0];
+	f[i][1] += dEidrj[1];
+	f[i][2] += dEidrj[2];
+	f[j][0] -= dEidrj[0];
+	f[j][1] -= dEidrj[1];
+	f[j][2] -= dEidrj[2];
+	  
+        ev_tally_xyz(i,j,atom->nlocal,force->newton_pair,0.0,0.0,
+                      dEidrj[0],dEidrj[1],dEidrj[2],
+		      dx, dy, dz);
+      }
+    }
+  }else{
+    // Calculate forces of local and ghost atoms.
+    interface.getForces(atom->f);
+  }
 
   // Add energy contribution to total energy.
   if (eflag_global)
