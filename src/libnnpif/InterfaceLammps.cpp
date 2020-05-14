@@ -287,7 +287,8 @@ double InterfaceLammps::getAtomicEnergy(int index) const
 {
     Atom const& a = structure.atoms.at(index);
 
-    if (normalize) return physicalEnergy(a.energy) / cfenergy;
+    if (normalize) return (physicalEnergy(a.energy) + meanEnergy 
+		    + elements.at(a.element).getAtomicEnergyOffset() ) / cfenergy;
     else return a.energy / cfenergy;
 }
 
